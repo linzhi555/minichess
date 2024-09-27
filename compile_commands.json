@@ -1,0 +1,30 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-g",
+      "-I./libchess",
+      "-o",
+      "example",
+      "main.c"
+    ],
+    "directory": "/home/lin/test/c/chess",
+    "file": "/home/lin/test/c/chess/main.c",
+    "output": "/home/lin/test/c/chess/example"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-g",
+      "-I./libchess",
+      "-o",
+      "example",
+      "./libchess/chess.c"
+    ],
+    "directory": "/home/lin/test/c/chess",
+    "file": "/home/lin/test/c/chess/libchess/chess.c",
+    "output": "/home/lin/test/c/chess/example"
+  }
+]
