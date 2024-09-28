@@ -2,8 +2,8 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-char* piece_simp_names[] = {
-    [King] = "K", [Knight] = "N", [Queen] = "Q", [Rook] = "R", [Bishop] = "B", [Pawn] = "P",
+char piece_simp_names[] = {
+    [King] = 'K', [Knight] = 'N', [Queen] = 'Q', [Rook] = 'R', [Bishop] = 'B', [Pawn] = 'P',
 };
 
 void _initPiece(GameState* game, int x, int y, Piece p, Team t) {
@@ -53,16 +53,23 @@ void InitGame(GameState* game) {
 }
 
 void Game_debug(GameState* game) {
+    printf("  A B C D E F G H\n");
     for (int j = 7; j >= 0; j--) {
+        printf("%c", '1' + j);
         for (int i = 0; i < 8; i++) {
             printf("[");
             Elem* ptr = &game->board[i + j * 8];
             if (ptr->isEmpty) {
-                printf((i + j) % 2 == 0 ? "*" : " ");
+                printf((i + j) % 2 == 0 ? "#" : " ");
             } else {
-                printf("%1s", piece_simp_names[ptr->piece]);
+                char simpname = piece_simp_names[ptr->piece];
+                printf("%s", ptr->team == White ? "\033[0;32m" : "\033[0;31m");
+                printf("%c", simpname);
+                printf("\033[0m");
             }
         }
-        printf("]\n");
+        printf("]");
+        printf("%c\n", '1' + j);
     }
+    printf("  A B C D E F G H\n");
 }
