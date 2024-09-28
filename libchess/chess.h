@@ -50,3 +50,4 @@ typedef struct {
 
 void InitGame(GameState* game);
 void Game_debug(GameState* game);
+void Game_exec(GameState* game, const char* const cmd);

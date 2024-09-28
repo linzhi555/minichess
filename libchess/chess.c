@@ -73,3 +73,7 @@ void Game_debug(GameState* game) {
     }
     printf("  A B C D E F G H\n");
 }
+
+void Game_exec(GameState* game, const char* const cmd) {
+    printf("state to exec: %s", cmd);
+}
