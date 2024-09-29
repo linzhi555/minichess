@@ -42,7 +42,7 @@ const char* Response_to_str(Response r) {
     case ErrSucide:
         return "ErrSucide";
     }
-    return "";
+    return "Undefined";
 }
 
 static void _initPiece(GameState* game, int x, int y, Piece p, Team t) {
