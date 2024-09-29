@@ -1,6 +1,8 @@
 #pragma once
 #include <stdbool.h>
 
+#define MAXSTEPS 1000
+
 typedef enum Response {
     Success = 0,
     ErrParseCmd,
@@ -41,13 +43,34 @@ typedef struct Elem {
 } Elem;
 
 typedef struct {
-    int round;
+    int x;
+    int y;
+} Pos;
+
+typedef struct {
+    Pos from;
+    Pos to;
+    Piece p;
+    Team turn;
+    bool isEat;
+    Piece died;
+    bool isPrompt;
+    Piece newP;
+    bool isCastle;
+    bool isEnpass;
+    bool isCheckMate;
+} Step;
+
+typedef struct {
     bool isFinished;
     Team winner;
     Team turn;
     Elem board[64];
+    int stepNum;
+    Step history[MAXSTEPS];
 } GameState;
 
 void InitGame(GameState* game);
 void Game_debug(GameState* game);
-void Game_exec(GameState* game, const char* const cmd);
+Response Game_exec(GameState* game, const char* const cmd);
+const char* Response_to_str(Response r);

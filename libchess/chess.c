@@ -1,12 +1,51 @@
 #include "chess.h"
 #include <stdbool.h>
 #include <stdio.h>
+#include <string.h>
 
 char piece_simp_names[] = {
     [King] = 'K', [Knight] = 'N', [Queen] = 'Q', [Rook] = 'R', [Bishop] = 'B', [Pawn] = 'P',
 };
 
-void _initPiece(GameState* game, int x, int y, Piece p, Team t) {
+const char* Response_to_str(Response r) {
+    switch (r) {
+    case Success:
+        return "Success";
+    case ErrParseCmd:
+        return "ErrParseCmd";
+    case ErrNoPieceThere:
+        return "ErrNoPieceThere";
+    case ErrWrongPos:
+        return "ErrWrongPos";
+    case ErrAlreadyFinish:
+        return "ErrAlreadyFinish";
+    case ErrNotYourTurn:
+        return "ErrNotYourTurn";
+    case ErrPieceRule:
+        return "ErrPieceRule";
+    case ErrPawnMove:
+        return "ErrPawnMove";
+    case ErrKingMove:
+        return "ErrKingMove";
+    case ErrBishopMove:
+        return "ErrBishopMove";
+    case ErrKnightMove:
+        return "ErrKnightMove";
+    case ErrQueenMove:
+        return "ErrQueenMove";
+    case ErrRookMove:
+        return "ErrRookMove";
+    case ErrBlocked:
+        return "ErrBlocked";
+    case ErrKillSame:
+        return "ErrKillSame";
+    case ErrSucide:
+        return "ErrSucide";
+    }
+    return "";
+}
+
+static void _initPiece(GameState* game, int x, int y, Piece p, Team t) {
     Elem* ptr = &game->board[x + 8 * y];
     ptr->isEmpty = false;
     ptr->team = t;
@@ -14,9 +53,11 @@ void _initPiece(GameState* game, int x, int y, Piece p, Team t) {
 }
 
 void InitGame(GameState* game) {
-    game->round = 0;
+    game->stepNum = 0;
     game->isFinished = false;
     game->turn = White;
+
+    // init boards
 
     for (int i = 0; i < 64; i++) {
         Elem temp = {
@@ -74,6 +115,47 @@ void Game_debug(GameState* game) {
     printf("  A B C D E F G H\n");
 }
 
-void Game_exec(GameState* game, const char* const cmd) {
-    printf("state to exec: %s", cmd);
+static int parse_Pos(const char* str, Pos* from, Pos* to) {
+    if (strlen(str) < 4) {
+        return -1;
+    }
+
+    if ('a' > str[0] || str[0] > 'h') {
+        return 1;
+    }
+    if ('1' > str[1] || str[1] > '7') {
+        return 2;
+    }
+    if ('a' > str[2] || str[2] > 'h') {
+        return 3;
+    }
+    if ('1' > str[3] || str[3] > '7') {
+        return 4;
+    }
+
+    from->x = str[0] - 'a';
+    from->y = str[1] - '1';
+    to->x = str[2] - 'a';
+    to->y = str[3] - '1';
+
+    return 0;
+}
+
+static Elem* findElem(GameState* game, Pos p) {
+    return &game->board[p.x + 8 * p.y];
+}
+
+Response Game_exec(GameState* game, const char* const cmd) {
+    Step step;
+
+    int err = parse_Pos(cmd, &step.from, &step.to);
+    if (err != 0) return ErrParseCmd;
+
+    Elem* temp = findElem(game, step.from);
+    if (temp->isEmpty) return ErrNoPieceThere;
+    if (temp->team != game->turn) return ErrNotYourTurn;
+    step.p = temp->piece;
+    step.turn = game->turn;
+
+    return Success;
 }

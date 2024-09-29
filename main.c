@@ -19,7 +19,8 @@ int main() {
         buffer[bytes_read] = '\0';
         system("clear");
         Game_debug(&game);
-        Game_exec(&game, buffer);
+        Response res = Game_exec(&game, buffer);
+        printf("%s\n", Response_to_str(res));
         printf(">>> \n");
         sleep(1);
     }
