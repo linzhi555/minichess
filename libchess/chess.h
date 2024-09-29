@@ -73,4 +73,4 @@ typedef struct {
 void InitGame(GameState* game);
 void Game_debug(GameState* game);
 Response Game_exec(GameState* game, const char* const cmd);
-const char* Response_to_str(Response r);
+const char* Response_tostr(Response r);

@@ -20,7 +20,7 @@ int main() {
         system("clear");
         Game_debug(&game);
         Response res = Game_exec(&game, buffer);
-        printf("%s\n", Response_to_str(res));
+        printf("%s\n", Response_tostr(res));
         printf(">>> \n");
         sleep(1);
     }

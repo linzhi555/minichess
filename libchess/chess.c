@@ -7,7 +7,44 @@ char piece_simp_names[] = {
     [King] = 'K', [Knight] = 'N', [Queen] = 'Q', [Rook] = 'R', [Bishop] = 'B', [Pawn] = 'P',
 };
 
-const char* Response_to_str(Response r) {
+typedef Response (*PieceRule)(GameState* game, Step* step);
+
+static Response kingRule(GameState* game, Step* step);
+static Response queenRule(GameState* game, Step* step);
+static Response rookRule(GameState* game, Step* step);
+static Response bishopRule(GameState* game, Step* step);
+static Response knightRule(GameState* game, Step* step);
+static Response pawnRule(GameState* game, Step* step);
+
+static PieceRule PRuleTable[] = {
+    [King] = kingRule,     [Queen] = queenRule,   [Rook] = rookRule,
+    [Bishop] = bishopRule, [Knight] = knightRule, [Pawn] = pawnRule,
+};
+
+static Response kingRule(GameState* game, Step* step) {
+    return ErrKingMove;
+}
+
+static Response queenRule(GameState* game, Step* step) {
+    return ErrQueenMove;
+}
+
+static Response rookRule(GameState* game, Step* step) {
+    return ErrRookMove;
+}
+
+static Response bishopRule(GameState* game, Step* step) {
+    return ErrBishopMove;
+}
+
+static Response knightRule(GameState* game, Step* step) {
+    return ErrKnightMove;
+}
+static Response pawnRule(GameState* game, Step* step) {
+    return ErrPawnMove;
+}
+
+const char* Response_tostr(Response r) {
     switch (r) {
     case Success:
         return "Success";
@@ -156,6 +193,7 @@ Response Game_exec(GameState* game, const char* const cmd) {
     if (temp->team != game->turn) return ErrNotYourTurn;
     step.p = temp->piece;
     step.turn = game->turn;
+    PieceRule rule = PRuleTable[step.p];
 
     return Success;
 }
