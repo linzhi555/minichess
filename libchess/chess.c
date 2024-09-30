@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-static Elem* findElem(GameState* game, Pos p);
+static Elem* findElem(GameState* game, Vec2 p);
 // static Piece* findPiece(GameState* game, Pos p);
 
 char piece_simp_names[] = {
@@ -13,7 +13,7 @@ char piece_simp_names[] = {
 
 typedef Response (*PieceRule)(GameState* game, Step* step);
 
-bool Pos_hasAbsDiff(Pos p1, Pos p2, int xdiff, int ydiff) {
+bool Vec2_hasAbsDiff(Vec2 p1, Vec2 p2, int xdiff, int ydiff) {
     if (abs(p2.x - p1.x) != xdiff) {
         return false;
     }
@@ -24,19 +24,74 @@ bool Pos_hasAbsDiff(Pos p1, Pos p2, int xdiff, int ydiff) {
 }
 
 // 1 means y postive director -1 mean negative direction, 0 means same
-int Pos_yDirect(Pos from, Pos to) {
+int Vec2_yDirect(Vec2 from, Vec2 to) {
     if (to.y - from.y == 0) {
         return 0;
     }
     return (to.y - from.y) / abs(to.y - from.y);
 }
 
-int Pos_xAbsDiff(Pos from, Pos to) {
+int Vec2_xDirect(Vec2 from, Vec2 to) {
+    if (to.x - from.x == 0) {
+        return 0;
+    }
+    return (to.x - from.x) / abs(to.x - from.x);
+}
+
+int Vec2_xAbsDiff(Vec2 from, Vec2 to) {
     return abs(to.x - from.x);
 }
 
-int Pos_yAbsDiff(Pos from, Pos to) {
+bool Vec2_isSame(Vec2 v1, Vec2 v2) {
+    return v1.x == v2.x && v1.y == v2.y;
+}
+
+Vec2 Vec2_add(Vec2 v1, Vec2 v2) {
+    Vec2 res;
+    res.x = v1.x + v2.x;
+    res.y = v1.y + v2.y;
+    return res;
+}
+
+int Vec2_yAbsDiff(Vec2 from, Vec2 to) {
     return abs(to.y - from.y);
+}
+
+// the bishop-like move
+bool Vec2_isSlash(Vec2 from, Vec2 to, Vec2* direct) {
+    if (Vec2_xAbsDiff(from, to) == Vec2_yAbsDiff(from, to)) {
+        direct->x = Vec2_xDirect(from, to);
+        direct->y = Vec2_yDirect(from, to);
+        return true;
+    }
+
+    return false;
+}
+
+// the rook-like move
+bool Vec2_isStraight(Vec2 from, Vec2 to, Vec2* direct) {
+    if (Vec2_xAbsDiff(from, to) * Vec2_yAbsDiff(from, to) == 0) {
+        direct->x = Vec2_xDirect(from, to);
+        direct->y = Vec2_yDirect(from, to);
+        return true;
+    }
+
+    return false;
+}
+
+int Vec2_betweens(Vec2 from, Vec2 to, Vec2 betweens[], int n) {
+    Vec2 direct;
+    if (!Vec2_isSlash(from, to, &direct) && !Vec2_isStraight(from, to, &direct)) {
+        return 0;
+    }
+
+    int res = 0;
+    for (Vec2 cur = Vec2_add(from, direct); !Vec2_isSame(cur, to) && res < n; cur = Vec2_add(cur, direct)) {
+        betweens[res] = cur;
+        res++;
+    }
+
+    return res;
 }
 
 static Response kingRule(GameState* game, Step* step);
@@ -52,24 +107,41 @@ static PieceRule PRuleTable[] = {
 };
 
 static Response kingRule(GameState* game, Step* step) {
-    if (Pos_hasAbsDiff(step->to, step->from, 1, 1)) return Success;
-    if (Pos_hasAbsDiff(step->to, step->from, 1, 0)) return Success;
-    if (Pos_hasAbsDiff(step->to, step->from, 0, 1)) return Success;
+    if (Vec2_hasAbsDiff(step->to, step->from, 1, 1)) return Success;
+    if (Vec2_hasAbsDiff(step->to, step->from, 1, 0)) return Success;
+    if (Vec2_hasAbsDiff(step->to, step->from, 0, 1)) return Success;
     return ErrKingMove;
 }
 
+static bool _blocked(GameState* game, Vec2 from, Vec2 to) {
+    Vec2 betweens[8];
+    int res = Vec2_betweens(from, to, betweens, 8);
+    for (int i = 0; i < res; i++) {
+        Elem* elem = findElem(game, betweens[i]);
+
+        if (!elem->isEmpty) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 static Response rookRule(GameState* game, Step* step) {
-    if (Pos_xAbsDiff(step->from, step->to) * Pos_yAbsDiff(step->from, step->to) != 0) {
+    if (Vec2_xAbsDiff(step->from, step->to) * Vec2_yAbsDiff(step->from, step->to) != 0) {
         return ErrRookMove;
     }
+    if (_blocked(game, step->from, step->to)) return ErrBlocked;
 
     return Success;
 }
 
 static Response bishopRule(GameState* game, Step* step) {
-    if (Pos_xAbsDiff(step->from, step->to) != Pos_yAbsDiff(step->from, step->to)) {
+    if (Vec2_xAbsDiff(step->from, step->to) != Vec2_yAbsDiff(step->from, step->to)) {
         return ErrBishopMove;
     }
+
+    if (_blocked(game, step->from, step->to)) return ErrBlocked;
     return Success;
 }
 
@@ -84,8 +156,8 @@ static Response queenRule(GameState* game, Step* step) {
 }
 
 static Response knightRule(GameState* game, Step* step) {
-    if (Pos_hasAbsDiff(step->to, step->from, 2, 1)) return Success;
-    if (Pos_hasAbsDiff(step->to, step->from, 1, 2)) return Success;
+    if (Vec2_hasAbsDiff(step->to, step->from, 2, 1)) return Success;
+    if (Vec2_hasAbsDiff(step->to, step->from, 1, 2)) return Success;
 
     return ErrKnightMove;
 }
@@ -93,13 +165,16 @@ static Response knightRule(GameState* game, Step* step) {
 static Response pawnRule(GameState* game, Step* step) {
     Elem* temp = findElem(game, step->from);
 
-    if (Pos_yDirect(step->from, step->to) != (temp->team == White ? 1 : -1)) {
+    if (Vec2_yDirect(step->from, step->to) != (temp->team == White ? 1 : -1)) {
         return ErrPawnMove;
     }
 
-    if (Pos_hasAbsDiff(step->to, step->from, 0, 1)) return Success;
+    if (Vec2_hasAbsDiff(step->to, step->from, 0, 1)) return Success;
 
-    if (Pos_hasAbsDiff(step->to, step->from, 0, 2)) return Success;
+    if (Vec2_hasAbsDiff(step->to, step->from, 0, 2)) {
+        if (_blocked(game, step->from, step->to)) return ErrBlocked;
+        return Success;
+    }
 
     return ErrPawnMove;
 }
@@ -212,7 +287,7 @@ void Game_debug(GameState* game) {
     printf("  A B C D E F G H\n");
 }
 
-static int parse_Pos(const char* str, Pos* from, Pos* to) {
+static int parse_Pos(const char* str, Vec2* from, Vec2* to) {
     if (strlen(str) < 4) {
         return -1;
     }
@@ -220,13 +295,13 @@ static int parse_Pos(const char* str, Pos* from, Pos* to) {
     if ('a' > str[0] || str[0] > 'h') {
         return 1;
     }
-    if ('1' > str[1] || str[1] > '7') {
+    if ('1' > str[1] || str[1] > '8') {
         return 2;
     }
     if ('a' > str[2] || str[2] > 'h') {
         return 3;
     }
-    if ('1' > str[3] || str[3] > '7') {
+    if ('1' > str[3] || str[3] > '8') {
         return 4;
     }
 
@@ -238,7 +313,7 @@ static int parse_Pos(const char* str, Pos* from, Pos* to) {
     return 0;
 }
 
-static Elem* findElem(GameState* game, Pos p) {
+static Elem* findElem(GameState* game, Vec2 p) {
     return &game->board[p.x + 8 * p.y];
 }
 

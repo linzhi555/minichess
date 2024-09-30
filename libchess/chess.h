@@ -45,11 +45,11 @@ typedef struct Elem {
 typedef struct {
     int x;
     int y;
-} Pos;
+} Vec2;
 
 typedef struct {
-    Pos from;
-    Pos to;
+    Vec2 from;
+    Vec2 to;
     Piece p;
     Team turn;
     bool isEat;
