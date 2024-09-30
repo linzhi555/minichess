@@ -242,6 +242,27 @@ static Elem* findElem(GameState* game, Pos p) {
     return &game->board[p.x + 8 * p.y];
 }
 
+static void Game_copy(GameState* dist, const GameState* src) {
+    memcpy(dist, src, sizeof(GameState));
+}
+
+static int Game_doStep(GameState* game, const Step* step) {
+    game->turn = game->turn == White ? Black : White;
+    game->stepNum++;
+
+    Elem* from = findElem(game, step->from);
+    Elem* to = findElem(game, step->to);
+
+    memcpy(to, from, sizeof(Elem));
+    from->isEmpty = true;
+
+    return 0;
+}
+
+static bool Game_isCheckMate(GameState* game, Team team) {
+    return false;
+}
+
 Response Game_exec(GameState* game, const char* const cmd) {
     Step step;
 
@@ -255,8 +276,14 @@ Response Game_exec(GameState* game, const char* const cmd) {
     step.turn = game->turn;
     PieceRule rule = PRuleTable[step.p];
     Response res = rule(game, &step);
-    if (res != Success) {
-        return res;
-    }
+    if (res != Success) return res;
+
+    GameState newState;
+    Game_copy(&newState, game);
+    Game_doStep(&newState, &step);
+    if (Game_isCheckMate(&newState, game->turn)) return ErrSucide;
+
+    // finally all check is donw ,we  can change the game state now
+    Game_copy(game, &newState);
     return Success;
 }
