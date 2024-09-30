@@ -1,13 +1,43 @@
 #include "chess.h"
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+
+static Elem* findElem(GameState* game, Pos p);
+// static Piece* findPiece(GameState* game, Pos p);
 
 char piece_simp_names[] = {
     [King] = 'K', [Knight] = 'N', [Queen] = 'Q', [Rook] = 'R', [Bishop] = 'B', [Pawn] = 'P',
 };
 
 typedef Response (*PieceRule)(GameState* game, Step* step);
+
+bool Pos_hasAbsDiff(Pos p1, Pos p2, int xdiff, int ydiff) {
+    if (abs(p2.x - p1.x) != xdiff) {
+        return false;
+    }
+    if (abs(p2.y - p1.y) != ydiff) {
+        return false;
+    }
+    return true;
+}
+
+// 1 means y postive director -1 mean negative direction, 0 means same
+int Pos_yDirect(Pos from, Pos to) {
+    if (to.y - from.y == 0) {
+        return 0;
+    }
+    return (to.y - from.y) / abs(to.y - from.y);
+}
+
+int Pos_xAbsDiff(Pos from, Pos to) {
+    return abs(to.x - from.x);
+}
+
+int Pos_yAbsDiff(Pos from, Pos to) {
+    return abs(to.y - from.y);
+}
 
 static Response kingRule(GameState* game, Step* step);
 static Response queenRule(GameState* game, Step* step);
@@ -22,25 +52,55 @@ static PieceRule PRuleTable[] = {
 };
 
 static Response kingRule(GameState* game, Step* step) {
+    if (Pos_hasAbsDiff(step->to, step->from, 1, 1)) return Success;
+    if (Pos_hasAbsDiff(step->to, step->from, 1, 0)) return Success;
+    if (Pos_hasAbsDiff(step->to, step->from, 0, 1)) return Success;
     return ErrKingMove;
 }
 
-static Response queenRule(GameState* game, Step* step) {
-    return ErrQueenMove;
-}
-
 static Response rookRule(GameState* game, Step* step) {
-    return ErrRookMove;
+    if (Pos_xAbsDiff(step->from, step->to) * Pos_yAbsDiff(step->from, step->to) != 0) {
+        return ErrRookMove;
+    }
+
+    return Success;
 }
 
 static Response bishopRule(GameState* game, Step* step) {
-    return ErrBishopMove;
+    if (Pos_xAbsDiff(step->from, step->to) != Pos_yAbsDiff(step->from, step->to)) {
+        return ErrBishopMove;
+    }
+    return Success;
+}
+
+static Response queenRule(GameState* game, Step* step) {
+    Response res = bishopRule(game, step);
+    if (res == Success) return Success;
+
+    res = rookRule(game, step);
+    if (res == Success) return Success;
+
+    return ErrQueenMove;
 }
 
 static Response knightRule(GameState* game, Step* step) {
+    if (Pos_hasAbsDiff(step->to, step->from, 2, 1)) return Success;
+    if (Pos_hasAbsDiff(step->to, step->from, 1, 2)) return Success;
+
     return ErrKnightMove;
 }
+
 static Response pawnRule(GameState* game, Step* step) {
+    Elem* temp = findElem(game, step->from);
+
+    if (Pos_yDirect(step->from, step->to) != (temp->team == White ? 1 : -1)) {
+        return ErrPawnMove;
+    }
+
+    if (Pos_hasAbsDiff(step->to, step->from, 0, 1)) return Success;
+
+    if (Pos_hasAbsDiff(step->to, step->from, 0, 2)) return Success;
+
     return ErrPawnMove;
 }
 
@@ -194,6 +254,9 @@ Response Game_exec(GameState* game, const char* const cmd) {
     step.p = temp->piece;
     step.turn = game->turn;
     PieceRule rule = PRuleTable[step.p];
-
+    Response res = rule(game, &step);
+    if (res != Success) {
+        return res;
+    }
     return Success;
 }
