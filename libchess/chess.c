@@ -335,6 +335,34 @@ static int Game_doStep(GameState* game, const Step* step) {
 }
 
 static bool Game_isCheckMate(GameState* game, Team team) {
+    Vec2 kingPos;
+    bool findKing = false;
+    for (int i = 0; i < 64; i++) {
+        Elem* temp = &game->board[i];
+        if (!temp->isEmpty && temp->piece == King && temp->team == team) {
+            kingPos.x = i % 8;
+            kingPos.y = i / 8;
+            findKing = true;
+        }
+    }
+    if (!findKing) return false;
+
+    for (int i = 0; i < 64; i++) {
+        Vec2 from;
+        Elem* temp = &game->board[i];
+        if (!temp->isEmpty && temp->team != team) {
+            from.x = i % 8;
+            from.y = i / 8;
+        } else {
+            continue;
+        }
+
+        Step step = { .from = from, .to = kingPos };
+        PieceRule rule = PRuleTable[temp->piece];
+        Response res = rule(game, &step);
+        if (res == Success) return true;
+    }
+
     return false;
 }
 
@@ -358,7 +386,7 @@ Response Game_exec(GameState* game, const char* const cmd) {
     Game_doStep(&newState, &step);
     if (Game_isCheckMate(&newState, game->turn)) return ErrSucide;
 
-    // finally all check is donw ,we  can change the game state now
+    // finally all check is done ,we  can change the game state now
     Game_copy(game, &newState);
     return Success;
 }
