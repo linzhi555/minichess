@@ -4,14 +4,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-static Elem* findElem(GameState* game, Vec2 p);
-// static Piece* findPiece(GameState* game, Pos p);
+static const Elem* findElem(const GameState* game, Vec2 p);
 
 char piece_simp_names[] = {
     [King] = 'K', [Knight] = 'N', [Queen] = 'Q', [Rook] = 'R', [Bishop] = 'B', [Pawn] = 'P',
 };
 
-typedef Response (*PieceRule)(GameState* game, Step* step);
+typedef Response (*PieceRule)(const GameState* game, Step* step);
 
 bool Vec2_hasAbsDiff(Vec2 p1, Vec2 p2, int xdiff, int ydiff) {
     if (abs(p2.x - p1.x) != xdiff) {
@@ -94,30 +93,30 @@ int Vec2_betweens(Vec2 from, Vec2 to, Vec2 betweens[], int n) {
     return res;
 }
 
-static Response kingRule(GameState* game, Step* step);
-static Response queenRule(GameState* game, Step* step);
-static Response rookRule(GameState* game, Step* step);
-static Response bishopRule(GameState* game, Step* step);
-static Response knightRule(GameState* game, Step* step);
-static Response pawnRule(GameState* game, Step* step);
+static Response kingRule(const GameState* game, Step* step);
+static Response queenRule(const GameState* game, Step* step);
+static Response rookRule(const GameState* game, Step* step);
+static Response bishopRule(const GameState* game, Step* step);
+static Response knightRule(const GameState* game, Step* step);
+static Response pawnRule(const GameState* game, Step* step);
 
 static PieceRule PRuleTable[] = {
     [King] = kingRule,     [Queen] = queenRule,   [Rook] = rookRule,
     [Bishop] = bishopRule, [Knight] = knightRule, [Pawn] = pawnRule,
 };
 
-static Response kingRule(GameState* game, Step* step) {
+static Response kingRule(const GameState* game, Step* step) {
     if (Vec2_hasAbsDiff(step->to, step->from, 1, 1)) return Success;
     if (Vec2_hasAbsDiff(step->to, step->from, 1, 0)) return Success;
     if (Vec2_hasAbsDiff(step->to, step->from, 0, 1)) return Success;
     return ErrKingMove;
 }
 
-static bool _blocked(GameState* game, Vec2 from, Vec2 to) {
+static bool _blocked(const GameState* game, Vec2 from, Vec2 to) {
     Vec2 betweens[8];
     int res = Vec2_betweens(from, to, betweens, 8);
     for (int i = 0; i < res; i++) {
-        Elem* elem = findElem(game, betweens[i]);
+        const Elem* elem = findElem(game, betweens[i]);
 
         if (!elem->isEmpty) {
             return true;
@@ -127,7 +126,7 @@ static bool _blocked(GameState* game, Vec2 from, Vec2 to) {
     return false;
 }
 
-static Response rookRule(GameState* game, Step* step) {
+static Response rookRule(const GameState* game, Step* step) {
     if (Vec2_xAbsDiff(step->from, step->to) * Vec2_yAbsDiff(step->from, step->to) != 0) {
         return ErrRookMove;
     }
@@ -136,7 +135,7 @@ static Response rookRule(GameState* game, Step* step) {
     return Success;
 }
 
-static Response bishopRule(GameState* game, Step* step) {
+static Response bishopRule(const GameState* game, Step* step) {
     if (Vec2_xAbsDiff(step->from, step->to) != Vec2_yAbsDiff(step->from, step->to)) {
         return ErrBishopMove;
     }
@@ -145,7 +144,7 @@ static Response bishopRule(GameState* game, Step* step) {
     return Success;
 }
 
-static Response queenRule(GameState* game, Step* step) {
+static Response queenRule(const GameState* game, Step* step) {
     Response res = bishopRule(game, step);
     if (res == Success) return Success;
 
@@ -155,15 +154,15 @@ static Response queenRule(GameState* game, Step* step) {
     return ErrQueenMove;
 }
 
-static Response knightRule(GameState* game, Step* step) {
+static Response knightRule(const GameState* game, Step* step) {
     if (Vec2_hasAbsDiff(step->to, step->from, 2, 1)) return Success;
     if (Vec2_hasAbsDiff(step->to, step->from, 1, 2)) return Success;
 
     return ErrKnightMove;
 }
 
-static Response pawnRule(GameState* game, Step* step) {
-    Elem* temp = findElem(game, step->from);
+static Response pawnRule(const GameState* game, Step* step) {
+    const Elem* temp = findElem(game, step->from);
 
     if (Vec2_yDirect(step->from, step->to) != (temp->team == White ? 1 : -1)) {
         return ErrPawnMove;
@@ -228,6 +227,7 @@ void InitGame(GameState* game) {
     game->stepNum = 0;
     game->isFinished = false;
     game->turn = White;
+    game->winner = NoTeam;
 
     // init boards
 
@@ -313,7 +313,13 @@ static int parse_Pos(const char* str, Vec2* from, Vec2* to) {
     return 0;
 }
 
-static Elem* findElem(GameState* game, Vec2 p) {
+// return a unmutable reference of a elem
+static const Elem* findElem(const GameState* game, Vec2 p) {
+    return &game->board[p.x + 8 * p.y];
+}
+
+// return a mutable reference of a elem
+static Elem* findElemMut(GameState* game, Vec2 p) {
     return &game->board[p.x + 8 * p.y];
 }
 
@@ -325,8 +331,8 @@ static int Game_doStep(GameState* game, const Step* step) {
     game->turn = game->turn == White ? Black : White;
     game->stepNum++;
 
-    Elem* from = findElem(game, step->from);
-    Elem* to = findElem(game, step->to);
+    Elem* from = findElemMut(game, step->from);
+    Elem* to = findElemMut(game, step->to);
 
     memcpy(to, from, sizeof(Elem));
     from->isEmpty = true;
@@ -334,7 +340,7 @@ static int Game_doStep(GameState* game, const Step* step) {
     return 0;
 }
 
-static bool Game_isCheckMate(GameState* game, Team team) {
+static bool Game_isCheck(GameState* game, Team team) {
     Vec2 kingPos;
     bool findKing = false;
     for (int i = 0; i < 64; i++) {
@@ -366,13 +372,52 @@ static bool Game_isCheckMate(GameState* game, Team team) {
     return false;
 }
 
+static int possibleMoves(const GameState* game, Vec2 pos, Step result[], int maxLen) {
+    int resultNum = 0;
+
+    const Elem* elem = findElem(game, pos);
+    if (elem == NULL && elem->isEmpty == true) return 0;
+    PieceRule rule = PRuleTable[elem->piece];
+
+    for (int i = 0; i < 64 && resultNum < maxLen; i++) {
+        Vec2 to = { .x = i % 8, .y = i / 8 };
+        Step step = { .from = pos, .to = to };
+        Response resp = rule(game, &step);
+        if (resp == Success) {
+            result[resultNum] = step;
+            resultNum++;
+        }
+    }
+
+    return resultNum;
+}
+
+static bool Game_hasLegalMove(GameState* game) {
+    for (int i = 0; i < 64; i++) {
+        Vec2 pos = { .x = i % 8, .y = i / 8 };
+        const Elem* elem = findElem(game, pos);
+        if (!elem->isEmpty && elem->team == game->turn) {
+            Step result[64];
+            int moveNum = possibleMoves(game, pos, result, 64);
+            for (int i = 0; i < moveNum; i++) {
+                GameState newState;
+                Game_copy(&newState, game);
+                Game_doStep(&newState, &result[i]);
+                if (!Game_isCheck(&newState, game->turn)) return true;
+            }
+        }
+    }
+
+    return false;
+}
+
 Response Game_exec(GameState* game, const char* const cmd) {
     Step step;
 
     int err = parse_Pos(cmd, &step.from, &step.to);
     if (err != 0) return ErrParseCmd;
 
-    Elem* temp = findElem(game, step.from);
+    const Elem* temp = findElem(game, step.from);
     if (temp->isEmpty) return ErrNoPieceThere;
     if (temp->team != game->turn) return ErrNotYourTurn;
     step.p = temp->piece;
@@ -384,9 +429,22 @@ Response Game_exec(GameState* game, const char* const cmd) {
     GameState newState;
     Game_copy(&newState, game);
     Game_doStep(&newState, &step);
-    if (Game_isCheckMate(&newState, game->turn)) return ErrSucide;
+
+    if (Game_isCheck(&newState, game->turn)) return ErrSucide;
 
     // finally all check is done ,we  can change the game state now
+
+    // check if the game is finished
+    if (Game_isCheck(&newState, newState.turn)) {
+        if (!Game_hasLegalMove(&newState)) {
+            newState.isFinished = true;
+            newState.winner = game->turn;
+        }
+    } else if (!Game_hasLegalMove(&newState)) {
+        newState.isFinished = true;
+        newState.winner = NoTeam;
+    }
+
     Game_copy(game, &newState);
     return Success;
 }

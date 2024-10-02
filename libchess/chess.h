@@ -25,6 +25,7 @@ typedef enum Response {
 typedef enum Team {
     White,
     Black,
+    NoTeam,
 } Team;
 
 typedef enum Piece {
