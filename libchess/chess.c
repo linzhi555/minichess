@@ -208,8 +208,6 @@ const char* Response_tostr(Response r) {
         return "ErrRookMove";
     case ErrBlocked:
         return "ErrBlocked";
-    case ErrKillSame:
-        return "ErrKillSame";
     case ErrSucide:
         return "ErrSucide";
     }
@@ -372,6 +370,30 @@ static bool Game_isCheck(GameState* game, Team team) {
     return false;
 }
 
+static Response Game_isLegalMove(const GameState* game, Step* step) {
+    const Elem* temp = findElem(game, step->from);
+    if (temp->isEmpty) return ErrNoPieceThere;
+    if (temp->team != game->turn) return ErrNotYourTurn;
+
+    step->p = temp->piece;
+    step->turn = temp->team;
+
+    const Elem* toElem = findElem(game, step->to);
+    if (!toElem->isEmpty && toElem->team == step->turn) return ErrBlocked;
+
+    PieceRule rule = PRuleTable[step->p];
+    Response res = rule(game, step);
+    if (res != Success) return res;
+
+    GameState newState;
+    Game_copy(&newState, game);
+    Game_doStep(&newState, step);
+
+    if (Game_isCheck(&newState, game->turn)) return ErrSucide;
+
+    return Success;
+}
+
 static int possibleMoves(const GameState* game, Vec2 pos, Step result[], int maxLen) {
     int resultNum = 0;
 
@@ -382,8 +404,7 @@ static int possibleMoves(const GameState* game, Vec2 pos, Step result[], int max
     for (int i = 0; i < 64 && resultNum < maxLen; i++) {
         Vec2 to = { .x = i % 8, .y = i / 8 };
         Step step = { .from = pos, .to = to };
-        Response resp = rule(game, &step);
-        if (resp == Success) {
+        if (Game_isLegalMove(game, &step) == Success) {
             result[resultNum] = step;
             resultNum++;
         }
@@ -392,22 +413,16 @@ static int possibleMoves(const GameState* game, Vec2 pos, Step result[], int max
     return resultNum;
 }
 
-static bool Game_hasLegalMove(GameState* game) {
+static bool Game_hasLegalMove(const GameState* game) {
     for (int i = 0; i < 64; i++) {
         Vec2 pos = { .x = i % 8, .y = i / 8 };
         const Elem* elem = findElem(game, pos);
         if (!elem->isEmpty && elem->team == game->turn) {
             Step result[64];
             int moveNum = possibleMoves(game, pos, result, 64);
-            for (int i = 0; i < moveNum; i++) {
-                GameState newState;
-                Game_copy(&newState, game);
-                Game_doStep(&newState, &result[i]);
-                if (!Game_isCheck(&newState, game->turn)) return true;
-            }
+            if (moveNum != 0) return true;
         }
     }
-
     return false;
 }
 
@@ -416,35 +431,23 @@ Response Game_exec(GameState* game, const char* const cmd) {
 
     int err = parse_Pos(cmd, &step.from, &step.to);
     if (err != 0) return ErrParseCmd;
-
-    const Elem* temp = findElem(game, step.from);
-    if (temp->isEmpty) return ErrNoPieceThere;
-    if (temp->team != game->turn) return ErrNotYourTurn;
-    step.p = temp->piece;
-    step.turn = game->turn;
-    PieceRule rule = PRuleTable[step.p];
-    Response res = rule(game, &step);
-    if (res != Success) return res;
-
-    GameState newState;
-    Game_copy(&newState, game);
-    Game_doStep(&newState, &step);
-
-    if (Game_isCheck(&newState, game->turn)) return ErrSucide;
-
-    // finally all check is done ,we  can change the game state now
-
-    // check if the game is finished
-    if (Game_isCheck(&newState, newState.turn)) {
-        if (!Game_hasLegalMove(&newState)) {
-            newState.isFinished = true;
-            newState.winner = game->turn;
-        }
-    } else if (!Game_hasLegalMove(&newState)) {
-        newState.isFinished = true;
-        newState.winner = NoTeam;
+    Response resp = Game_isLegalMove(game, &step);
+    if (resp != Success) {
+        return resp;
     }
 
-    Game_copy(game, &newState);
+    // finally all check is done ,we need change the game state
+    Game_doStep(game, &step);
+    // check if the game is finished
+    if (Game_isCheck(game, game->turn)) {
+        if (!Game_hasLegalMove(game)) {
+            game->isFinished = true;
+            game->winner = game->turn;
+        }
+    } else if (!Game_hasLegalMove(game)) {
+        game->isFinished = true;
+        game->winner = NoTeam;
+    }
+
     return Success;
 }

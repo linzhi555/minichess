@@ -18,7 +18,6 @@ typedef enum Response {
     ErrQueenMove,
     ErrRookMove,
     ErrBlocked,
-    ErrKillSame,
     ErrSucide,
 } Response;
 
