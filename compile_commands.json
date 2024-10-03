@@ -3,6 +3,32 @@
     "arguments": [
       "/usr/bin/gcc",
       "-c",
+      "-o",
+      "minijson.o",
+      "./minijson/json.c"
+    ],
+    "directory": "/home/lin/test/c/chess",
+    "file": "/home/lin/test/c/chess/minijson/json.c",
+    "output": "/home/lin/test/c/chess/minijson.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-g",
+      "-I./minijson",
+      "-o",
+      "test1",
+      "./test/minijson_test.c"
+    ],
+    "directory": "/home/lin/test/c/chess",
+    "file": "/home/lin/test/c/chess/test/minijson_test.c",
+    "output": "/home/lin/test/c/chess/test1"
+  },
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
       "-g",
       "-I./libchess",
       "-o",

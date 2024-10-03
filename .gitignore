@@ -1,2 +1,5 @@
 example
+test1*
 .cache/
+*.o
+*.a
