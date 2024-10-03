@@ -1,2 +1,0 @@
-
-char* minijson_version();

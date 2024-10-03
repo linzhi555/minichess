@@ -1,7 +1,7 @@
 INC=-I./libchess
 SRC=main.c ./libchess/chess.c
 
-JSONSRC= ./minijson/json.c
+JSONSRC= ./minijson/minijson.c
 JSONINC= -I./minijson
 
 
@@ -31,4 +31,4 @@ test1:libminijson.a
 	gcc -g $(TEST1SRC)  $(JSONINC) -L. -lminijson -o test1
 
 clean:
-	rm test1 *.o example libminijson.a compile_commands.json
+	rm -f test1 *.o example libminijson.a compile_commands.json
