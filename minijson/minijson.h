@@ -2,42 +2,54 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-const char* minijson_version();
-
-enum JsonObjType {
-    JObj,
-    JArray,
-    JNum,
-    JBool,
-    JStr,
+typedef enum {
     JNull,
-};
+    JBool,
+    JNum,
+    JStr,
+    JArray,
+    JMap,
+} JsonObjType;
 
-struct JsonBaseObj {
-    enum JsonObjType type;
-    void* ptr;
-};
-
-struct JsonBool {
+typedef struct {
     bool data;
-};
+} JsonBool;
 
-struct JsonNum {
+typedef struct {
     bool isInt;
     int64_t Int64;
     double Double;
-};
+} JsonNum;
 
-struct JsonArray {
+typedef struct {
+    int len;
+    int cap;
+    char* data;
+} JsonStr;
+
+typedef struct {
     int length;
     struct JsonBaseObj* list;
-};
+} JsonArray;
 
-struct JsonObj {
-    int length;
-    char** keyList;
+typedef struct {
+    int len;
+    int cap;
+    struct JsonStr* keyList;
     struct JsonBaseObj* valueList;
-};
+} JsonMap;
 
-struct JsonObj* minijson_parse_str();
+typedef struct {
+    JsonObjType type;
+    union {
+        JsonBool jsonBool;
+        JsonNum jsonNum;
+        JsonStr jsonStr;
+        JsonArray jsonArray;
+        JsonMap jsonMap;
+    };
+} JsonBaseObj;
+
+const char* minijson_version();
+JsonMap* minijson_parse_str();
 void minijson_to_str();

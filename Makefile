@@ -9,12 +9,13 @@ TEST1SRC = ./test/minijson_test.c
 BEAR=bear --
 
 all: build
-	
+
 compile_commands.json:
 	$(BEAR)  make build
 
 run:build
 	./example
+
 test:build
 	./test1
 
