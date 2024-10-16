@@ -6,4 +6,6 @@ make
 ```
 
 run:
+```
 ./example
+```
