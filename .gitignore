@@ -1,5 +1,5 @@
 compile_commands.json
-example
+minichess
 test1*
 .cache/
 *.o
